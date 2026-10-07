@@ -1,5 +1,6 @@
 from fastapi import FastAPI,UploadFile,File,HTTPException,status
 from pathlib import Path
+from zip_utilis import inspect_zip
 
 UPLOAD_DIR=Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -20,8 +21,14 @@ async def upload_file(file: UploadFile = File(...)):
     with open(file_path, "wb") as buffer:
         while chunk := await file.read(1024 * 1024):
             buffer.write(chunk)
+    if file.filename.endswith(".zip"):
+        files_inside_zip = inspect_zip(file_path)
+        return {
+            "filename": file.filename,
+            "files_inside_zip": files_inside_zip
+        }
 
     return {
         "filename": file.filename,
-        "message": "File uploaded successfully"
+        "message": "KML uploaded successfully"
     }
