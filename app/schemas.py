@@ -25,3 +25,7 @@ class FileRecord(BaseModel):
     crs: str
     features: list[Feature]
     measurements: list[Measurement]
+
+class MeasurementsResponse(BaseModel):
+    file_id: str
+    measurements: list[Measurement]

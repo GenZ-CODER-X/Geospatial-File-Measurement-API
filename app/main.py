@@ -1,12 +1,12 @@
+import uuid
+from app.schemas import FileRecord,MeasurementsResponse
 from fastapi import FastAPI,UploadFile,File,HTTPException,status
 from pathlib import Path
 from app.zip_utilis import inspect_zip,extract_zip,find_shapefile
 import geopandas as gpd
 from app.measurement import calculate_measurements
-import uuid
-from app.schemas import FileRecord
 
-files_db={}
+files_db:dict[str,FileRecord]={}
 
 UPLOAD_DIR=Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -51,22 +51,24 @@ async def upload_file(file: UploadFile = File(...)):
                 "geometry": row.geometry.__geo_interface__,
                 "properties": properties,
     })
-        return {
-    "filename": file.filename,
-    "feature_count": len(gdf),
-    "columns": list(gdf.columns),
-    "geometry_types": gdf.geometry.geom_type.unique().tolist(),
-    "crs": str(gdf.crs),
-    "features": features,
-    "measurements":measurements
-}   
+        files_db[file_id] = FileRecord(
+    id=file_id,
+    filename=file.filename,
+    feature_count=len(gdf),
+    columns=list(gdf.columns),
+    geometry_types=gdf.geometry.geom_type.unique().tolist(),
+    crs=str(gdf.crs),
+    features=features,
+    measurements=measurements,
+)
+        return files_db[file_id]
     return {
         "filename": file.filename,
         "message": "KML uploaded successfully"
     }
 
 
-@app.get("/api/files/{file_id}")
+@app.get("/api/files/{file_id}",response_model=FileRecord)
 def get_file(file_id: str):
 
     if file_id not in files_db:
@@ -77,7 +79,7 @@ def get_file(file_id: str):
 
     return files_db[file_id]
 
-@app.get("/api/files/{file_id}/measurements/")
+@app.get("/api/files/{file_id}/measurements/",response_model=MeasurementsResponse)
 def get_measurements(file_id: str):
 
     if file_id not in files_db:
@@ -88,5 +90,5 @@ def get_measurements(file_id: str):
 
     return {
         "file_id": file_id,
-        "measurements": files_db[file_id]["measurements"]
+        "measurements": files_db[file_id].measurements
     }
