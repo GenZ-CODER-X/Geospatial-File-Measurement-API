@@ -8,8 +8,7 @@ def create_measurement(
     measurement: Measurement,
 ) -> Measurement:
     db.add(measurement)
-    db.commit()
-    db.refresh(measurement)
+    db.flush()
 
     return measurement
 
@@ -19,7 +18,7 @@ def create_measurements(
     measurements: list[Measurement],
 ) -> list[Measurement]:
     db.add_all(measurements)
-    db.commit()
+    db.flush()
 
     for measurement in measurements:
         db.refresh(measurement)

@@ -19,7 +19,7 @@ def create_features(
     features: list[Feature],
 ) -> list[Feature]:
     db.add_all(features)
-    db.commit()
+    db.flush()
 
     for feature in features:
         db.refresh(feature)
@@ -36,3 +36,18 @@ def get_features_by_file_id(
         .filter(Feature.file_id == file_id)
         .all()
     )
+
+"""
+Why flush()?
+db.add_all()
+      ↓
+db.flush()
+      ↓
+PostgreSQL generates Feature IDs
+      ↓
+we can use those IDs
+      ↓
+create Measurements
+      ↓
+final db.commit()
+"""

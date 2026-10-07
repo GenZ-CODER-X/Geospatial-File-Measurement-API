@@ -8,8 +8,7 @@ def create_file(
     file: UploadedFile,
 ) -> UploadedFile:
     db.add(file)
-    db.commit()
-    db.refresh(file)
+    db.flush()
 
     return file
 
