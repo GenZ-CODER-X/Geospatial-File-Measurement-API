@@ -1,9 +1,12 @@
 from fastapi import FastAPI,UploadFile,File,HTTPException,status
 from pathlib import Path
-from zip_utilis import inspect_zip,extract_zip,find_shapefile
+from app.zip_utilis import inspect_zip,extract_zip,find_shapefile
 import geopandas as gpd
 from app.measurement import calculate_measurements
+import uuid
+from app.schemas import FileRecord
 
+files_db={}
 
 UPLOAD_DIR=Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -25,16 +28,18 @@ async def upload_file(file: UploadFile = File(...)):
         while chunk := await file.read(1024 * 1024):
             buffer.write(chunk)
     if file.filename.endswith(".zip"):
-        files_inside_zip = inspect_zip(file_path)
+        inspect_zip(file_path)
         extract_dir = UPLOAD_DIR / file_path.stem
         extract_dir.mkdir(exist_ok=True)
-        extracted_files = extract_zip(file_path, extract_dir)
+        extract_zip(file_path, extract_dir)
 
         shapefile = find_shapefile(extract_dir)
 
         gdf = gpd.read_file(shapefile)
 
         measurements = calculate_measurements(gdf)
+
+        file_id = str(uuid.uuid4())
 
         features = []
         for index, row in gdf.iterrows():
@@ -58,4 +63,30 @@ async def upload_file(file: UploadFile = File(...)):
     return {
         "filename": file.filename,
         "message": "KML uploaded successfully"
+    }
+
+
+@app.get("/api/files/{file_id}")
+def get_file(file_id: str):
+
+    if file_id not in files_db:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="File not found"
+        )
+
+    return files_db[file_id]
+
+@app.get("/api/files/{file_id}/measurements/")
+def get_measurements(file_id: str):
+
+    if file_id not in files_db:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="File not found"
+        )
+
+    return {
+        "file_id": file_id,
+        "measurements": files_db[file_id]["measurements"]
     }
