@@ -1,6 +1,7 @@
 from fastapi import FastAPI,UploadFile,File,HTTPException,status
 from pathlib import Path
-from zip_utilis import inspect_zip
+from zip_utilis import inspect_zip,extract_zip,find_shapefile
+import geopandas as gpd
 
 UPLOAD_DIR=Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -23,11 +24,21 @@ async def upload_file(file: UploadFile = File(...)):
             buffer.write(chunk)
     if file.filename.endswith(".zip"):
         files_inside_zip = inspect_zip(file_path)
+        extract_dir = UPLOAD_DIR / file_path.stem
+        extract_dir.mkdir(exist_ok=True)
+        extracted_files = extract_zip(file_path, extract_dir)
+        shapefile = find_shapefile(extract_dir)
+        gdf = gpd.read_file(shapefile)
         return {
-            "filename": file.filename,
-            "files_inside_zip": files_inside_zip
-        }
+    "filename": file.filename,
+    "feature_count": len(gdf),
+    "columns": list(gdf.columns),
+    "geometry_types": gdf.geometry.geom_type.unique().tolist(),
+    "crs": str(gdf.crs),
+}
 
+    
+    
     return {
         "filename": file.filename,
         "message": "KML uploaded successfully"
