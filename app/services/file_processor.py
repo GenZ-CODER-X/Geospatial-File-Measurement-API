@@ -41,9 +41,9 @@ def extract_features(gdf: gpd.GeoDataFrame) -> list[dict]:
         properties = row.drop("geometry").to_dict()
 
         properties = {
-    key: None if pd.isna(value) else value
-    for key, value in properties.items()
-}
+                key: None if pd.isna(value) else value
+                for key, value in properties.items()
+            }
 
         features.append(
             {
