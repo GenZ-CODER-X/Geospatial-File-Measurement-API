@@ -4,6 +4,8 @@ import geopandas as gpd
 
 from app.zip_utilis import extract_zip, find_shapefile
 
+import pandas as pd
+
 
 def process_zip(file_path: Path) -> gpd.GeoDataFrame:
     extract_dir = file_path.parent / file_path.stem
@@ -37,6 +39,11 @@ def extract_features(gdf: gpd.GeoDataFrame) -> list[dict]:
 
     for index, row in gdf.iterrows():
         properties = row.drop("geometry").to_dict()
+
+        properties = {
+    key: None if pd.isna(value) else value
+    for key, value in properties.items()
+}
 
         features.append(
             {
