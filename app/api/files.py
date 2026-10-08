@@ -5,9 +5,9 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.schemas.file import FileResponse
+from app.schemas.file import FileResponse,MeasurementsResponse
 from app.services.file_service import process_uploaded_file, get_file_details
-
+from app.repositories.measurement_repository import get_measurements_by_file_id
 
 router = APIRouter(
     prefix="/api/files",
@@ -67,3 +67,22 @@ def get_file(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         )
+    
+@router.get("/{file_id}/measurements/", response_model=MeasurementsResponse)
+def get_measurements(
+    file_id,
+    db: Session = Depends(get_db),
+):
+    measurements = get_measurements_by_file_id(
+        db=db,
+        file_id=file_id,
+    )
+    if not measurements:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No measurements found",
+        )
+    return {
+        "file_id": str(file_id),
+        "measurements": measurements,
+    }
