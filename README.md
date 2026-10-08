@@ -3,7 +3,7 @@
 
 > A CRS-aware FastAPI backend for uploading geospatial datasets, extracting features and metadata, and calculating accurate geometry measurements.
 >
-> ![Go and see the meme](./assets/youshouldnthaveit.webp)
+> ![Go and see the meme](youshouldnthaveit-v0-yggsq2cwq5kh1.webp)
 
 > **This changed my POV on using AI to code.**
 
