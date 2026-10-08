@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.schemas.file import FileResponse
-from app.services.file_service import process_uploaded_file
+from app.services.file_service import process_uploaded_file, get_file_details
 
 
 router = APIRouter(
@@ -38,7 +38,7 @@ async def upload_file(
     try:
         uploaded_file = process_uploaded_file(
             db=db,
-            ile_id=file_id,
+            file_id=file_id,
             file_path=file_path,
             filename=file.filename,
         )
@@ -48,5 +48,22 @@ async def upload_file(
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
+    
+@router.get("/{file_id}", response_model=FileResponse)
+def get_file(
+    file_id,
+    db: Session = Depends(get_db),
+):
+    try:
+        return get_file_details(
+            db=db,
+            file_id=file_id,
+        )
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         )

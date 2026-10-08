@@ -14,6 +14,19 @@ from app.services.file_processor import process_file, extract_features
 from app.services.measurement_service import calculate_measurements
 
 
+def build_file_response(uploaded_file, features, measurements):
+    return {
+        "id": str(uploaded_file.id),
+        "filename": uploaded_file.filename,
+        "feature_count": uploaded_file.feature_count,
+        "columns": uploaded_file.columns,
+        "geometry_types": uploaded_file.geometry_types,
+        "crs": uploaded_file.crs,
+        "features": features,
+        "measurements": measurements,
+    }
+
+
 def process_uploaded_file(
     db: Session,
     file_id,
@@ -76,7 +89,15 @@ def process_uploaded_file(
         # 7. Commit everything
         db.commit()
 
-        return uploaded_file
+        # 8. Fetch created records for response
+        features = get_features_by_file_id(db, file_id)
+        measurements = get_measurements_by_file_id(db, file_id)
+
+        return build_file_response(
+                uploaded_file,
+                features,
+                measurements,
+            )
 
     except Exception:
         db.rollback()
@@ -91,4 +112,11 @@ def get_file_details(
     if uploaded_file is None:
         raise ValueError("File not found")
 
-    return uploaded_file
+    features = get_features_by_file_id(db, file_id)
+    measurements = get_measurements_by_file_id(db, file_id)
+
+    return build_file_response(
+    uploaded_file,
+    features,
+    measurements,
+)

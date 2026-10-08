@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from feature import FeatureResponse
+from .feature import FeatureResponse
 from .measurement import MeasurementResponse
 
 

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import geopandas as gpd
 
-from app.utils.zip_utils import extract_zip, find_shapefile
+from app.zip_utilis import extract_zip, find_shapefile
 
 
 def process_zip(file_path: Path) -> gpd.GeoDataFrame:
