@@ -50,6 +50,11 @@ async def upload_file(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
         )
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while processing the file.",
+        )
     
 @router.get("/{file_id}", response_model=FileResponse)
 def get_file(
