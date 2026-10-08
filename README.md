@@ -1,248 +1,184 @@
-Perfect. Let's make the README now.
-
-Replace the contents of `README.md` with this:
-
 ```markdown
-# Geospatial File Measurement API
+# 🌍 Geospatial File Measurement API
 
-A FastAPI backend for uploading geospatial datasets, extracting their features and metadata, and calculating geometry measurements with CRS-aware processing.
+> A CRS-aware FastAPI backend for uploading geospatial datasets, extracting features and metadata, and calculating accurate geometry measurements.
 
-## Features
+## 🚀 Overview
 
-- Upload `.zip` files containing Shapefiles
-- Upload `.kml` files
-- Extract feature geometry and properties
-- Detect geometry types
-- Detect and preserve CRS information
-- Calculate polygon area in square meters
-- Calculate LineString length in meters
-- Skip measurements for Point geometries
-- Prevent measurement when CRS information is missing
-- Store processed data in PostgreSQL
-- REST API with Swagger/OpenAPI documentation
-- Structured service and repository layers
-- Graceful handling of invalid files and processing errors
+The **Geospatial File Measurement API** processes geospatial datasets such as Shapefiles and KML files and exposes their metadata, features, and geometry measurements through a REST API.
 
-## Tech Stack
+The system is designed around a simple principle:
+
+> **Never calculate geospatial measurements directly from latitude/longitude coordinates.**
+
+When a dataset uses a geographic CRS such as `EPSG:4326`, the system automatically determines a suitable projected CRS, transforms the geometries, and then calculates measurements in meters.
+
+### What it supports
+
+| Capability | Support |
+|---|---|
+| Shapefile (`.zip`) | ✅ |
+| KML (`.kml`) | ✅ |
+| Polygon area | ✅ |
+| MultiPolygon area | ✅ |
+| LineString length | ✅ |
+| MultiLineString length | ✅ |
+| Point measurements | N/A |
+| CRS detection | ✅ |
+| Geographic → projected CRS transformation | ✅ |
+| PostgreSQL persistence | ✅ |
+| REST API | ✅ |
+| Swagger/OpenAPI | ✅ |
+| Layered architecture | ✅ |
+
+---
+
+## 🏗️ Architecture
+
+```text
+                         Client
+                           │
+                           ▼
+                    ┌─────────────┐
+                    │   FastAPI   │
+                    │ API Layer   │
+                    └──────┬──────┘
+                           │
+                           ▼
+                    ┌─────────────┐
+                    │   Service   │
+                    │    Layer    │
+                    └──────┬──────┘
+                           │
+              ┌────────────┼────────────┐
+              ▼            ▼            ▼
+        File Processor  Measurement  Validation
+              │            │
+              └──────┬─────┘
+                     │
+                     ▼
+              ┌─────────────┐
+              │ Repository  │
+              │    Layer    │
+              └──────┬──────┘
+                     │
+                     ▼
+              ┌─────────────┐
+              │ PostgreSQL  │
+              └─────────────┘
+```
+
+### Processing Pipeline
+
+```text
+Upload
+  │
+  ▼
+Validate File
+  │
+  ├── ZIP ──► Extract ──► Find Shapefile
+  │
+  └── KML ──► Read KML
+                  │
+                  ▼
+             GeoDataFrame
+                  │
+                  ▼
+            Extract Features
+                  │
+                  ▼
+             Validate CRS
+                  │
+          ┌───────┴────────┐
+          │                │
+       Missing          Geographic
+          │                │
+          ▼                ▼
+        Reject       Project to CRS
+                           │
+                           ▼
+                    Calculate Metrics
+                           │
+                           ▼
+                    Persist to DB
+                           │
+                           ▼
+                       Response
+```
+
+---
+
+## 📐 CRS-Aware Measurements
+
+A major design requirement of this project is avoiding incorrect measurements caused by calculating distances or areas directly in geographic coordinates.
+
+For example:
+
+```text
+EPSG:4326
+Latitude / Longitude
+       │
+       ▼
+ Geographic CRS
+       │
+       ▼
+Estimate suitable projected CRS
+       │
+       ▼
+Transform geometry
+       │
+       ▼
+Calculate area / length
+       │
+       ▼
+Square meters / meters
+```
+
+If CRS information is missing, the system **rejects measurement processing** rather than returning potentially incorrect measurements.
+
+---
+
+## 🧩 Tech Stack
+
+**Backend**
 
 - Python
 - FastAPI
-- PostgreSQL
-- SQLAlchemy
-- GeoPandas
-- Shapely
-- Pydantic
 - Uvicorn
 
-## Architecture
+**Geospatial**
 
-The application follows a layered architecture:
+- GeoPandas
+- Shapely
 
-```text
-Client
-  |
-  v
-FastAPI API Layer
-  |
-  v
-Service Layer
-  |
-  +---- File Processing
-  |
-  +---- Measurement Service
-  |
-  v
-Repository Layer
-  |
-  v
-PostgreSQL
-```
+**Database**
 
-### Layers
-
-#### API Layer
-
-Responsible for:
-
-- HTTP requests and responses
-- File uploads
-- Request validation
-- HTTP error handling
-
-#### Service Layer
-
-Responsible for:
-
-- File processing orchestration
-- Feature extraction
-- Measurement calculation
-- Database transaction management
-
-#### Repository Layer
-
-Responsible for:
-
-- Database queries
-- Creating file records
-- Creating feature records
-- Creating measurement records
-- Retrieving stored data
-
-#### Database Layer
-
-PostgreSQL stores:
-
-- Uploaded file metadata
-- Extracted features
-- Feature properties
-- Measurements
-
-## Project Structure
-
-```text
-Geospatial File Measurement API/
-│
-├── app/
-│   ├── api/
-│   │   └── files.py
-│   │
-│   ├── core/
-│   │   └── config.py
-│   │
-│   ├── db/
-│   │   ├── database.py
-│   │   └── init_db.py
-│   │
-│   ├── models/
-│   │   ├── uploaded_file.py
-│   │   ├── feature.py
-│   │   └── measurement.py
-│   │
-│   ├── repositories/
-│   │   ├── file_repository.py
-│   │   ├── feature_repository.py
-│   │   └── measurement_repository.py
-│   │
-│   ├── schemas/
-│   │   ├── file.py
-│   │   ├── feature.py
-│   │   └── measurement.py
-│   │
-│   ├── services/
-│   │   ├── file_service.py
-│   │   ├── file_processor.py
-│   │   └── measurement_service.py
-│   │
-│   ├── zip_utilis.py
-│   └── main.py
-│
-├── uploads/
-├── tests/
-├── .env
-├── .env.example
-├── requirements.txt
-└── README.md
-```
-
-## Requirements
-
-- Python 3.11+
 - PostgreSQL
-- pip
+- SQLAlchemy
 
-## Installation
+**Validation / Serialization**
 
-Clone the repository:
+- Pydantic
 
-```bash
-git clone <your-repository-url>
-cd "Geospatial File Measurement API"
-```
+---
 
-Create and activate a virtual environment:
+## 🔌 API
 
-```bash
-python -m venv venv
-source venv/bin/activate
-```
-
-On Windows:
-
-```bash
-venv\Scripts\activate
-```
-
-Install dependencies:
-
-```bash
-pip install -r requirements.txt
-```
-
-## Database Setup
-
-Create a PostgreSQL database:
-
-```sql
-CREATE DATABASE geospatial_file_measurment;
-```
-
-Configure the database connection in `.env`.
-
-Example:
-
-```env
-DATABASE_URL=postgresql+psycopg://postgres:password@localhost:5432/geospatial_file_measurment
-```
-
-Initialize the database tables:
-
-```bash
-python -m app.db.init_db
-```
-
-## Running the Application
-
-Start the FastAPI server:
-
-```bash
-uvicorn app.main:app --reload
-```
-
-The API will be available at:
-
-```text
-http://127.0.0.1:8000
-```
-
-Swagger documentation:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
-## API Endpoints
-
-### 1. Upload File
+### Upload Dataset
 
 ```http
 POST /api/files/
 ```
 
-Accepts:
-
-- `.zip` containing a Shapefile
-- `.kml`
-
-Example:
+Upload a `.zip` Shapefile or `.kml` dataset.
 
 ```bash
 curl -X POST \
   http://127.0.0.1:8000/api/files/ \
-  -H "accept: application/json" \
   -F "file=@test_parcels.zip"
 ```
 
-### 2. Get File
+### Get File
 
 ```http
 GET /api/files/{file_id}
@@ -258,315 +194,250 @@ Returns:
 - Extracted features
 - Measurements
 
-Example:
-
-```bash
-curl http://127.0.0.1:8000/api/files/{file_id}
-```
-
-### 3. Get Measurements
+### Get Measurements
 
 ```http
 GET /api/files/{file_id}/measurements/
 ```
 
-Returns the calculated measurements for the uploaded dataset.
+Returns calculated measurements for the dataset.
 
-Example:
+### Interactive API Documentation
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+---
+
+## 🗄️ Data Model
+
+```text
+uploaded_files
+      │
+      ├───────────────┐
+      ▼               ▼
+   features      measurements
+      │               │
+      └───────┬───────┘
+              │
+        PostgreSQL
+```
+
+The database stores:
+
+- Uploaded file metadata
+- CRS information
+- Feature geometry
+- Feature properties
+- Geometry types
+- Calculated measurements
+
+---
+
+## 🛡️ Error Handling
+
+The API distinguishes between expected client errors and unexpected server failures.
+
+| Situation | Response |
+|---|---|
+| Unsupported file type | `400 Bad Request` |
+| Invalid ZIP | `400 Bad Request` |
+| Missing Shapefile | `400 Bad Request` |
+| Missing CRS | `400 Bad Request` |
+| Processing failure | `500 Internal Server Error` |
+
+Internal implementation details are not exposed to API clients for unexpected failures.
+
+---
+
+## 📁 Project Structure
+
+```text
+Geospatial File Measurement API/
+│
+├── app/
+│   ├── api/
+│   │   └── files.py
+│   ├── core/
+│   │   └── config.py
+│   ├── db/
+│   │   ├── database.py
+│   │   └── init_db.py
+│   ├── models/
+│   │   ├── uploaded_file.py
+│   │   ├── feature.py
+│   │   └── measurement.py
+│   ├── repositories/
+│   │   ├── file_repository.py
+│   │   ├── feature_repository.py
+│   │   └── measurement_repository.py
+│   ├── schemas/
+│   │   ├── file.py
+│   │   ├── feature.py
+│   │   └── measurement.py
+│   ├── services/
+│   │   ├── file_service.py
+│   │   ├── file_processor.py
+│   │   └── measurement_service.py
+│   ├── zip_utilis.py
+│   └── main.py
+│
+├── uploads/
+├── tests/
+├── .env.example
+├── requirements.txt
+└── README.md
+```
+
+---
+
+## ⚙️ Local Setup
+
+### Requirements
+
+- Python 3.11+
+- PostgreSQL
+- pip
+
+### Installation
 
 ```bash
-curl http://127.0.0.1:8000/api/files/{file_id}/measurements/
+git clone <your-repository-url>
+cd "Geospatial File Measurement API"
+
+python -m venv venv
+source venv/bin/activate
+
+pip install -r requirements.txt
 ```
 
-## Geometry Handling
+### Database
 
-The API supports geometry-specific measurements.
+Create the PostgreSQL database:
 
-| Geometry Type | Measurement |
-|---|---|
-| Point | No measurement |
-| MultiPoint | No measurement |
-| LineString | Length |
-| MultiLineString | Length |
-| Polygon | Area |
-| MultiPolygon | Area |
-
-### Polygon
-
-Polygon and MultiPolygon geometries are measured using:
-
-```python
-geometry.area
+```sql
+CREATE DATABASE geospatial_file_measurment;
 ```
 
-The resulting value is stored in:
+Configure `.env`:
+
+```env
+DATABASE_URL=postgresql+psycopg://postgres:password@localhost:5432/geospatial_file_measurment
+```
+
+Initialize tables:
+
+```bash
+python -m app.db.init_db
+```
+
+### Run
+
+```bash
+uvicorn app.main:app --reload
+```
+
+API:
 
 ```text
-area_m2
+http://127.0.0.1:8000
 ```
 
-### LineString
-
-LineString and MultiLineString geometries are measured using:
-
-```python
-geometry.length
-```
-
-The resulting value is stored in:
+Swagger:
 
 ```text
-length_m
+http://127.0.0.1:8000/docs
 ```
 
-### Point
+---
 
-Point geometries do not have an area or length measurement.
+## 🧪 Validation Performed
 
-Both values remain:
+The implementation has been manually verified against:
 
-```json
-{
-  "area_m2": null,
-  "length_m": null
-}
-```
+- ✅ ZIP containing Shapefile
+- ✅ KML Polygon
+- ✅ KML LineString
+- ✅ Point geometry
+- ✅ Missing CRS
+- ✅ Invalid ZIP
+- ✅ Missing values in KML properties
+- ✅ Expected API errors
+- ✅ Unexpected internal errors
 
-## CRS Handling
-
-Measurements must not be calculated directly using geographic coordinates such as latitude and longitude.
-
-For example:
-
-```text
-EPSG:4326
-```
-
-uses degrees rather than meters.
-
-When the input dataset uses a geographic CRS, the application estimates a suitable projected CRS and transforms the geometry before calculating area or length.
-
-```text
-Input Dataset
-     |
-     v
-Check CRS
-     |
-     +---- Missing CRS
-     |       |
-     |       v
-     |    Reject
-     |
-     +---- Geographic CRS
-     |       |
-     |       v
-     |   Estimate projected CRS
-     |       |
-     |       v
-     |   Transform geometry
-     |
-     v
-Calculate measurement
-```
-
-### Missing CRS
-
-If a dataset does not contain CRS information, measurement processing is rejected:
-
-```text
-Dataset has no CRS.
-Cannot calculate measurements safely.
-```
-
-This prevents potentially incorrect measurements.
-
-## File Processing Flow
-
-```text
-Upload File
-    |
-    v
-Validate Extension
-    |
-    +---- ZIP
-    |      |
-    |      v
-    |   Extract ZIP
-    |      |
-    |      v
-    |   Find Shapefile
-    |
-    +---- KML
-           |
-           v
-      Read KML
-           |
-           v
-      GeoDataFrame
-           |
-           v
-      Extract Features
-           |
-           v
-      Calculate Measurements
-           |
-           v
-      Store in PostgreSQL
-           |
-           v
-      Return API Response
-```
-
-## Error Handling
-
-The API distinguishes between expected input errors and unexpected internal errors.
-
-### Invalid File
-
-Unsupported extensions return:
-
-```text
-400 Bad Request
-```
-
-Example:
-
-```json
-{
-  "detail": "Only .zip and .kml files are supported"
-}
-```
-
-### Invalid ZIP
-
-If a ZIP does not contain a Shapefile:
-
-```text
-400 Bad Request
-```
-
-Example:
-
-```json
-{
-  "detail": "No Shapefile (.shp) found in ZIP"
-}
-```
-
-### Missing CRS
-
-Datasets without CRS information are rejected:
-
-```text
-400 Bad Request
-```
-
-### Unexpected Errors
-
-Unexpected internal failures return:
-
-```text
-500 Internal Server Error
-```
-
-without exposing internal implementation details to the API client.
-
-## Example Response
-
-```json
-{
-  "id": "04ac1746-59e9-4405-945b-0adaebd5c0ea",
-  "filename": "test_parcels.zip",
-  "feature_count": 3,
-  "columns": [
-    "name",
-    "category",
-    "geometry"
-  ],
-  "geometry_types": [
-    "Polygon"
-  ],
-  "crs": "EPSG:4326",
-  "features": [],
-  "measurements": [
-    {
-      "id": 7,
-      "geometry_type": "Polygon",
-      "area_m2": 1233312.23,
-      "length_m": null
-    }
-  ]
-}
-```
-
-## Design Decisions
-
-### PostgreSQL
-
-PostgreSQL is used for persistent storage of file metadata, features, properties, and measurements.
-
-### SQLAlchemy
-
-SQLAlchemy provides the database ORM and separates database models from API schemas.
-
-### GeoPandas
-
-GeoPandas is used for reading and processing geospatial datasets.
-
-### Layered Architecture
-
-The application separates API, service, repository, database model, and schema responsibilities to keep the code maintainable and testable.
-
-### CRS-Aware Measurement
-
-Measurements are calculated only after ensuring that the geometry is in an appropriate projected coordinate system.
-
-### Transaction Safety
-
-File, feature, and measurement records are persisted within a database transaction. Processing failures trigger a rollback.
-
-## Testing
-
-The application has been manually verified with:
-
-- ZIP containing Shapefile
-- KML Polygon
-- KML LineString
-- Point geometry
-- Missing CRS
-- Invalid ZIP
-- Missing values in KML properties
-- Expected API errors
-- Unexpected internal error handling
-
-Automated tests can be added under:
+Automated tests are being added under:
 
 ```text
 tests/
 ```
 
-## Future Improvements
+---
 
-Potential future improvements include:
+## 🔮 Future Improvements
 
 - Automated unit and integration tests
 - Background processing for large datasets
 - Object storage for uploaded files
 - More advanced CRS selection
-- Additional geometry types
+- Additional geometry support
 - Asynchronous processing
 - Agentic natural-language geospatial analysis
 
-## License
+---
 
-This project is developed as part of a technical assignment.
+## 📌 Engineering Decisions
+
+### Why PostgreSQL?
+
+Provides persistent storage for file metadata, features, properties, and measurements.
+
+### Why SQLAlchemy?
+
+Separates database models from API schemas and keeps database access inside the repository layer.
+
+### Why GeoPandas?
+
+Provides robust geospatial file parsing, CRS handling, geometry transformation, and spatial operations.
+
+### Why a layered architecture?
+
+Keeps HTTP handling, business logic, geospatial processing, and database access separated and independently testable.
+
+### Why CRS-aware measurement?
+
+Calculating area or distance directly from geographic coordinates can produce incorrect units and results. The system therefore transforms geographic datasets into a suitable projected CRS before measurement.
+
+---
+
+## 🤖 Future: Agentic Geospatial Analysis
+
+A planned extension is an **agentic geospatial analysis layer** that sits on top of the deterministic processing backend.
+
+The agent would be able to answer natural-language questions such as:
+
+```text
+"Which features are longer than 10 km?"
+
+"Does this dataset have any processing issues?"
+
+"Give me an overview of this dataset."
+
+"Are there any suspicious measurements?"
 ```
 
-### Then save and commit
+The LLM would orchestrate read-only analysis tools while the existing deterministic geospatial engine remains responsible for:
 
-```bash
-git add README.md
-git commit -m "docs: add project README"
-git push origin main
-```
+- CRS handling
+- Geometry processing
+- Area calculation
+- Length calculation
+- Dataset validation
 
+This keeps measurement correctness deterministic while allowing natural-language interaction.
+
+---
+
+## 📄 License
+
+This project was developed as part of a technical assignment.
